@@ -1,8 +1,8 @@
 package jwt.implementation.security;
 
 import jwt.implementation.domain.role.ERole;
-import jwt.implementation.filters.AuthFilter;
-import jwt.implementation.filters.JwtFilter;
+import jwt.implementation.filter.CustomAuthenticationFilter;
+import jwt.implementation.filter.JwtAuthorizationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,7 +24,7 @@ import java.util.Arrays;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
-@Configuration // auto intégré dans @ENableWebSecurity
+@Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
@@ -32,13 +32,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Autowired
-    public SecurityConfig(UserDetailsService userDetailsService, BCryptPasswordEncoder bCryptPasswordEncoder){
+    public SecurityConfig(UserDetailsService userDetailsService, BCryptPasswordEncoder bCryptPasswordEncoder) {
         this.userDetailsService = userDetailsService;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
-
     }
 
-    //
+
+    // Cette méthode permet d'authentifier un utilisateur.
+    // Elle a recours au service UserDetails (déjà configuré par Spring Security)
+    // Elle utilise un système de cryptage de mots de passe, également déja défini par Spring Security
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder);
@@ -46,21 +48,27 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.cors();
-        http.csrf().disable();
+        http.cors(); // On délègue à Spring la gestion des CORS
+        http.csrf().disable(); // On implémente le JWT : pas besoin de la protection csrf
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         http.authorizeRequests()
-                .antMatchers(POST,"/login").permitAll() //tous ont accès à L'URL login
-                .antMatchers(GET, "/api/users/all").hasRole(ERole.ADMIN.name())// seul le USER a accès à cet URL
-                .antMatchers(GET,"/api/roles/**").hasRole(ERole.USER.name())
-                .anyRequest().authenticated();// chaque requête sauf le permitAll doivent être des requêtes authentifées
+                .antMatchers(POST, "/login").permitAll() // Tout le monde peut accéder à l'URL "/login"
+                .antMatchers(GET, "/api/users/all").hasRole(ERole.ADMIN.name()) // Seuls les utilisateurs au rôle ADMIN sont autorisés à accéder à l'url "/users/**"
+                .antMatchers(GET,"/api/roles/**").hasRole(ERole.USER.name()) // idem mais pour USER et "/roles/**"
+                .anyRequest().authenticated(); // Chaque requête (sauf celles en .permitAll()) doivent être des requêtes authentifiées
 
-        http.addFilter(new AuthFilter(authenticationManagerBean()));
-        http.addFilterBefore(new JwtFilter(), UsernamePasswordAuthenticationFilter.class);
+        // J'ajoute mes filtres personnalisés (écrits dans le package filter)
+        http.addFilter(new CustomAuthenticationFilter(authenticationManagerBean()));
+        // J'ajoute le filtre JwtAuthorizationFilter AVANT le filtre UsernamePasswordAuthenticationFilter
+        // Ce filtre UsernamePasswordAuthenticationFilter correspond à notre CustomAuthenticationFilter.
+        http.addFilterBefore(new JwtAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
+
     }
 
-    //nom de méthode très important, car springsecurity l'appel par défaut quand on lui délégue les cors
+    // Implémentation de la configuration des CORS
+    // Le nom de la méthode (corsConfigurationSource) est  très important : car Spring Security appelle cette méthode par défaut
+    // Lorsque je lui délègue la gestion des CORS
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -73,9 +81,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return source;
     }
 
-    @Bean
+    @Bean // #Mister
     @Override
     public AuthenticationManager authenticationManagerBean() throws Exception {
         return super.authenticationManagerBean();
     }
+
+
 }

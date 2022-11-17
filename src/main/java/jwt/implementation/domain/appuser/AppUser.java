@@ -10,9 +10,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 @Entity
-@Data //génére les getters et setters
-@NoArgsConstructor // génére un constructeur sans arguments
-@AllArgsConstructor//génére un constructeur avec des arguments
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class AppUser {
 
     @Id
@@ -24,7 +24,7 @@ public class AppUser {
     private String username;
     private String password;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER) // EAGER : Utile pour le chargement en commandlineRunner run() de la classe ImplementationApplication
     private Collection<Role> roleList = new ArrayList<>();
 
 }

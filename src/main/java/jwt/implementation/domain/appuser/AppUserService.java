@@ -17,67 +17,61 @@ import java.util.List;
 
 @Service
 public class AppUserService implements UserDetailsService {
+
     private final AppUserRepository appUserRepository;
     private final RoleRepository roleRepository;
-
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Autowired
-    public AppUserService(AppUserRepository appUserRepository,
-                          RoleRepository roleRepository,
-                          BCryptPasswordEncoder bCryptPasswordEncoder) {
-
+    public AppUserService(AppUserRepository appUserRepository, RoleRepository roleRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
         this.appUserRepository = appUserRepository;
         this.roleRepository = roleRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        AppUser userAlreadyExists =  appUserRepository.findByUsername(username);
-        if (userAlreadyExists == null) {
-            System.out.println("User not found in DataBase");
-            throw new UsernameNotFoundException("User could not be found in DataBase");
-        }else{
-            System.out.println("User found in DataBase");
+        AppUser userAlreadyExists = appUserRepository.findByUsername(username);
+        if(userAlreadyExists == null) {
+            System.out.println("L'utilisateur n'a pas été trouvé en BDD");
+            throw new UsernameNotFoundException("User could not be found in the database");
+        } else {
+            System.out.println("L'utilisateur a été trouvé 🥳 " + username);
         }
-
-        Collection<SimpleGrantedAuthority> authorities = new ArrayList<SimpleGrantedAuthority>();
-        //je recupère le user qui est lier à un ou plusieurs role
-        // et je lui ajoute un role pour chacun de ceux qui existent
+        // J'ai récupéré mon utilisateur. Cet utilisateur est lié à un ou plusieurs rôles.
+        // Spring security ne comprend pas le "rôles" mais comprend la notion de "authorities"
+        // La notion est la même : simplement Spring Security ne comprend que "authorities"
+        Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
         userAlreadyExists.getRoleList().forEach(role -> {
             authorities.add(new SimpleGrantedAuthority(role.getName()));
         });
-        // je construit un "Objet" User appartenant à SpringSecurity
-        // celui est construit à partir de notre User de AppUser
-        return new User( userAlreadyExists.getUsername(), userAlreadyExists.getPassword(),authorities);
+        // Je construis un nouvel objet User, qui est l'objet utilisateur de Spring Security
+        // Cet objet User (Security) est construit à partir de l'objet User (AppUser) que j'ai créé
+        return new User(userAlreadyExists.getUsername(), userAlreadyExists.getPassword(), authorities);
     }
 
     public List<AppUser> getAllUsers() {
-        return appUserRepository.findAll(); // methode findAll et findBy sont reconnues et importantes pour JPA
+        return appUserRepository.findAll();
     }
 
     public AppUser saveUser(AppUser appUser) throws Exception {
-        AppUser userAlreadyExist=  appUserRepository.findByUsername(appUser.getUsername());
-
-        if(userAlreadyExist == null){
-            System.out.println("User saved :" + appUser.getUsername());
-            appUser.setPassword(bCryptPasswordEncoder.encode(appUser.getPassword()));
-            return appUserRepository.save(appUser);
-        } else {
-            System.out.println("Sorry pal ");
-            throw new Exception("User already exists");
-
-        }
+       AppUser userAlreadyExists = appUserRepository.findByUsername(appUser.getUsername());
+       if(userAlreadyExists == null) {
+           System.out.println("Je sauvegarde l'utilisateur suivant en BDD 🥳: " + appUser.getUsername());
+           appUser.setPassword(bCryptPasswordEncoder.encode(appUser.getPassword()));
+           return appUserRepository.save(appUser);
+       } else {
+           System.out.println("Nom d'utilisateur déjà pris : Oh noOooOon 😱");
+           throw new Exception("Username already taken");
+       }
     }
 
     public void addRoleToAppUser(String username, String roleName) throws Exception {
-
         AppUser userAlreadyExists = appUserRepository.findByUsername(username);
-
-        if(userAlreadyExists == null){
-            throw new Exception("username already exists");
-        } else{
+        if(userAlreadyExists == null) {
+            throw new Exception("Username dosen't exist");
+        } else {
             Role role = roleRepository.findByName(roleName);
             userAlreadyExists.getRoleList().add(role);
             appUserRepository.save(userAlreadyExists);

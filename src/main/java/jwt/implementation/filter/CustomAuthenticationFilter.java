@@ -1,4 +1,4 @@
-package jwt.implementation.filters;
+package jwt.implementation.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jwt.implementation.util.JwtUtil;
@@ -20,20 +20,18 @@ import java.util.Map;
 
 import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 
-
-public class AuthFilter extends UsernamePasswordAuthenticationFilter {
+public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
 
     @Autowired
-    public AuthFilter(AuthenticationManager authenticationManager) {
+    public CustomAuthenticationFilter(AuthenticationManager authenticationManager) {
         this.authenticationManager = authenticationManager;
-
     }
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request,
-                                                HttpServletResponse response) throws AuthenticationException {
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+
         String username = request.getParameter(SPRING_SECURITY_FORM_USERNAME_KEY);
         String password = request.getParameter(SPRING_SECURITY_FORM_PASSWORD_KEY);
 
@@ -44,18 +42,14 @@ public class AuthFilter extends UsernamePasswordAuthenticationFilter {
     }
 
     @Override
-    protected void successfulAuthentication(HttpServletRequest request,
-                                            HttpServletResponse response,
-                                            FilterChain chain,
-                                            Authentication authResult) throws IOException, ServletException {
-
-        User user = (User)authResult.getPrincipal();//on récupère le user authentifié que l'on cast (User) car getPrincipal renvoit un objet
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+        User user = (User)authResult.getPrincipal(); // On récupère l'utilisateur authentifié que l'on CAST de type User car getPrincipal() renvoie un type "Object" et non pas un type "User"
         JwtUtil jwtUtil = new JwtUtil();
-        String accessToken = jwtUtil.getAccessToken(user,request);
+        String accessToken = jwtUtil.getAccessToken(user, request); // Je récupère ENFIN mon accessToken OMG 😎
 
         response.setContentType(APPLICATION_JSON_VALUE);
         Map<String, String> tokens = new HashMap<>();
-        tokens.put("access_token", accessToken);// j'écris dans cet objet une paire de clé/valeur, la valeur étant le JWT que j'envoie au client
+        tokens.put("access_token", accessToken); // J'écris dans mon objet une paire de clé/valeur. La valeur c'est le JWT que j'envoie à mon client !
 
         new ObjectMapper().writeValue(response.getOutputStream(), tokens);
     }
