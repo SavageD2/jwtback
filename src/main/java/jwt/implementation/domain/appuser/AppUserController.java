@@ -21,28 +21,32 @@ public class AppUserController {
 
     @GetMapping("/all")
     public ResponseEntity<List<AppUser>> getAllUsers() {
-        List<AppUser> appUserList = appUserService.getAllUsers();
-        return  new ResponseEntity<>(appUserList, HttpStatus.OK);
+        List<AppUser> userList = appUserService.getAllUsers();
+        return new ResponseEntity<>(userList, HttpStatus.OK);
     }
 
     @PostMapping("/create")
-    public ResponseEntity<AppUser> createAppUser(@RequestBody AppUser appUser) throws Exception {
-        AppUser appUserCreated = appUserService.saveUser(appUser);
-        return  new ResponseEntity<>(appUserCreated, HttpStatus.CREATED);
+    public ResponseEntity<AppUser> createUser(@RequestBody AppUser appUser) throws Exception {
+       AppUser newAppUser = appUserService.saveUser(appUser);
+       return new ResponseEntity<>(newAppUser, HttpStatus.CREATED);
     }
 
     @PostMapping("/add-role-to-user")
     public ResponseEntity<?> addRoleToUser(@RequestBody RoleToUserForm form) throws Exception {
         appUserService.addRoleToAppUser(form.getUsername(), form.getRoleName());
-        return  new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 }
 
-@Data
+// On aimerait extraire les paramètres username et roleName du @RequestBody de ma méthode addRoleToUser().
+// Problème : On ne peut pas écrire plus d'un seul @RequestBody
+// Solution : on créé une classe pour modéliser l'objet que je reçois, à savoir :
+// un objet comportant un username ainsi qu'un roleName
+@Data // Lombok génère pour moi les getters & setters
 class RoleToUserForm {
-
     private String username;
     private String roleName;
-
 }
+
+

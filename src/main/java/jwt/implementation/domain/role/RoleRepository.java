@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface RoleRepository extends JpaRepository<Role, Long> {
-    public Role findByName(String name); //par défaut en public,
-    // la méthode findByName comme findByUsername n'existe pas sur JPA il faut donc les inclure manuellement
+
+    // Méthode personnalisée : c'est la même démarche que pour la méthode findByUsername() du AppUserRepository
+    public Role findByName(String name);
 }
